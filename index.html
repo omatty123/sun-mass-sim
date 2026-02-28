@@ -102,25 +102,47 @@
         .mis-controls {
             padding: 18px 24px 22px;
             border-top: 1px solid var(--border);
-        }
-        .mis-mass-row {
             display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 10px;
+            gap: 12px;
+            align-items: center;
         }
-        .mis-mass-label {
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            color: var(--text-muted);
-        }
-        .mis-mass-val {
+        .mis-boom-btn {
             font-family: 'IBM Plex Mono', monospace;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 500;
-            color: var(--text-bright);
+            padding: 10px 28px;
+            border: 1px solid var(--amber);
+            border-radius: 8px;
+            background: var(--amber-dim);
+            color: var(--amber);
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.02em;
+        }
+        .mis-boom-btn:hover {
+            background: rgba(245, 166, 35, 0.25);
+            box-shadow: 0 0 20px rgba(245, 166, 35, 0.15);
+        }
+        .mis-boom-btn:active { transform: scale(0.97); }
+        .mis-boom-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+        .mis-reset-btn {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            padding: 8px 18px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mis-reset-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
         }
         .mis-commentary {
             margin-top: 24px;
@@ -418,24 +440,20 @@
 <section class="act misconception-act">
     <div class="act-inner">
         <h2 class="act-heading">What students predict</h2>
-        <p class="act-desc">The intuition seems obvious: half the gravity should mean double the orbit. Reduce the Sun's mass and watch.</p>
+        <p class="act-desc">The intuition seems obvious: half the gravity, double the orbit. Hit the button and watch what most students expect.</p>
 
         <div class="mis-card">
             <div class="mis-canvas-wrap">
                 <canvas id="mis-canvas"></canvas>
             </div>
             <div class="mis-controls">
-                <div class="mis-mass-row">
-                    <span class="mis-mass-label">Solar Mass</span>
-                    <span class="mis-mass-val" id="mis-mass-val">100%</span>
-                </div>
-                <input type="range" id="mis-slider" class="mass-slider" min="10" max="100" value="100" step="1">
-                <div class="slider-ticks"><span>10%</span><span>50%</span><span>100%</span></div>
+                <button class="mis-boom-btn" id="mis-boom">50% -- Loss of half the Sun's mass</button>
+                <button class="mis-reset-btn" id="mis-reset" style="display:none;">Reset</button>
             </div>
         </div>
 
         <div class="mis-commentary" id="mis-commentary">
-            <p>Drag the slider to reduce the Sun's mass. In this model, Earth quietly settles into a larger circular orbit. At 50%, the orbit doubles. Clean. Intuitive. <strong style="color:var(--text-primary)">Wrong.</strong></p>
+            <p>Most students predict the same thing: half the gravity, double the orbit. Earth settles into a wider circle at <span class="orbit-radius">2.0 AU</span>. Click the button to see this intuition play out.</p>
         </div>
     </div>
 </section>
@@ -762,31 +780,27 @@
         },
     };
 
-    // Misconception slider
-    const misSlider = document.getElementById('mis-slider');
-    const misMassVal = document.getElementById('mis-mass-val');
+    // Misconception: single button
+    const misBoomBtn = document.getElementById('mis-boom');
+    const misResetBtn = document.getElementById('mis-reset');
     const misCommentary = document.getElementById('mis-commentary');
 
-    misSlider.addEventListener('input', function() {
-        const val = parseInt(this.value);
-        misMassVal.textContent = val + '%';
-        mis.alpha = val / 100;
+    misBoomBtn.addEventListener('click', function() {
+        mis.alpha = 0.5;
         mis.trail = [];
+        misBoomBtn.disabled = true;
+        misResetBtn.style.display = '';
+        misCommentary.innerHTML = '<p>The orbit doubles to <span class="orbit-radius">2.0 AU</span>. Earth settles into a wider, peaceful circle. Half the gravity, double the distance. Clean. Intuitive. <strong style="color:var(--text-primary)">Wrong.</strong></p>';
+    });
 
-        const r = (1 / mis.alpha).toFixed(1);
-        let text;
-        if (val === 100) {
-            text = 'Earth orbits the Sun at 1.0 AU. Normal.';
-        } else if (val >= 75) {
-            text = `The orbit grows to <span class="orbit-radius">${r} AU</span>. Earth moves a bit farther from the Sun. Still a stable circle.`;
-        } else if (val >= 50) {
-            text = `The orbit is now at <span class="orbit-radius">${r} AU</span>. ${val === 50 ? 'Twice as far, half the gravity. A peaceful, wider circle. Clean. Intuitive.' : 'A wider circle, but still stable.'} <strong style="color:var(--text-primary)">Wrong.</strong>`;
-        } else if (val >= 25) {
-            text = `A wide orbit at <span class="orbit-radius">${r} AU</span>. Jupiter-like distances. In this model, Earth just orbits more slowly. The real physics is far more violent.`;
-        } else {
-            text = `A vast orbit at <span class="orbit-radius">${r} AU</span>. This model says Earth happily orbits out here. Reality says otherwise.`;
-        }
-        misCommentary.innerHTML = `<p>${text}</p>`;
+    misResetBtn.addEventListener('click', function() {
+        mis.alpha = 1.0;
+        mis.currentRadius = 1;
+        mis.currentOmega = 1;
+        mis.trail = [];
+        misBoomBtn.disabled = false;
+        misResetBtn.style.display = 'none';
+        misCommentary.innerHTML = '<p>Most students predict the same thing: half the gravity, double the orbit. Earth settles into a wider circle at <span class="orbit-radius">2.0 AU</span>. Click the button to see this intuition play out.</p>';
     });
 
 
