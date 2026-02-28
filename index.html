@@ -664,7 +664,7 @@
             const targetOmega = this.alpha * this.alpha;
             this.currentRadius += (targetR - this.currentRadius) * 0.04;
             this.currentOmega += (targetOmega - this.currentOmega) * 0.04;
-            this.theta += this.currentOmega * 0.018;
+            this.theta += this.currentOmega * 0.028;
 
             const targetView = Math.max(2.5, targetR * 1.35 + 0.5);
             this.viewRadius += (targetView - this.viewRadius) * 0.03;
@@ -792,8 +792,8 @@
     //  REAL PHYSICS SIMULATION
     // ════════════════════════════════════════════
 
-    const DT = 0.003;
-    const STEPS_PER_FRAME = 5;
+    const DT = 0.004;
+    const STEPS_PER_FRAME = 7;
     const MAX_TRAIL = 15000;
     const V_KMS = 29.78;
 
@@ -888,14 +888,14 @@
                     const apo = 1 / (2 * a - 1);
                     target = Math.min(18, Math.max(2.0, apo * 1.15 + 0.4));
                 } else {
-                    // Escape: zoom out to follow Earth
+                    // Escape: zoom out to follow Earth, keep Sun and Earth both visible
                     const dist = Math.sqrt(this.earth.x ** 2 + this.earth.y ** 2);
-                    target = Math.max(3.0, dist * 1.4 + 0.5);
+                    target = Math.max(3.0, dist * 1.3 + 1.0);
                 }
             }
-            // Faster lerp when zooming out a lot, slower when near target
+            // Aggressive lerp so camera keeps up with escaping Earth
             const gap = Math.abs(target - this.viewRadius);
-            const speed = gap > 5 ? 0.06 : 0.04;
+            const speed = gap > 10 ? 0.12 : (gap > 3 ? 0.08 : 0.05);
             this.viewRadius += (target - this.viewRadius) * speed;
         },
 
@@ -1243,10 +1243,12 @@
             let autoMult = 1;
             if (real.applied && real.massFraction <= 0.505) {
                 const dist = Math.sqrt(real.earth.x ** 2 + real.earth.y ** 2);
-                // Ramp up speed: at dist=1 → 1x, at dist=5 → 5x, at dist=20 → 15x, at dist=100 → 40x
-                autoMult = Math.max(1, Math.min(60, Math.pow(dist, 1.3)));
+                // Immediate 3x boost + aggressive ramp with distance
+                // dist=1 → 3x, dist=2 → 6x, dist=5 → 15x, dist=10 → 30x, dist=20 → 60x
+                autoMult = 3 + Math.pow(Math.max(0, dist - 1), 1.1) * 3;
+                autoMult = Math.min(80, autoMult);
             }
-            const steps = Math.min(300, Math.round(STEPS_PER_FRAME * real.simSpeed * autoMult));
+            const steps = Math.min(500, Math.round(STEPS_PER_FRAME * real.simSpeed * autoMult));
             for (let i = 0; i < steps; i++) real.step();
             real.updateZoom();
             real.render();
