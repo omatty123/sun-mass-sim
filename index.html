@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What If the Sun Lost Half Its Mass?</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23ffbe0b'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300..700;1,300..700&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300..600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-deep: #060810;
+            --bg-surface: #0c0f1d;
+            --bg-panel: #10132a;
+            --bg-card: #141836;
+            --border: #1a1f42;
+            --border-hover: #282e5a;
+
+            --text-bright: #eef0f7;
+            --text-primary: #c8ccdd;
+            --text-secondary: #7c83a6;
+            --text-muted: #4d5478;
+
+            --blue: #3b82f6;
+            --blue-dim: rgba(59, 130, 246, 0.15);
+            --amber: #f5a623;
+            --amber-dim: rgba(245, 166, 35, 0.15);
+            --red: #ef4444;
+            --red-dim: rgba(239, 68, 68, 0.15);
+            --purple: #7c5ce0;
+            --purple-dim: rgba(124, 92, 224, 0.15);
+        }
+
+        html { background: var(--bg-deep); color: var(--text-primary); }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 400;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Scrollbar --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+
+        /* --- Header --- */
+        .site-header {
+            padding: 20px 32px 0;
+        }
+        .site-header h1 {
+            font-family: 'Cormorant', serif;
+            font-weight: 600;
+            font-size: 2rem;
+            color: var(--text-bright);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+        .subtitle {
+            font-weight: 300;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* --- Main Layout --- */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 0;
+            height: calc(100vh - 72px);
+            padding: 16px 0 0 32px;
+        }
+
+        /* --- Canvas --- */
+        .sim-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #050710;
+            border: 1px solid var(--border);
+        }
+        #sim {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .canvas-status {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            font-size: 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* --- Panel --- */
+        .panel {
+            padding: 16px 24px 24px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel-section { }
+        .panel-heading {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* --- Mass Control --- */
+        .mass-display {
+            display: flex;
+            align-items: baseline;
+            gap: 2px;
+            margin-bottom: 12px;
+        }
+        .mass-value {
+            font-family: 'Cormorant', serif;
+            font-weight: 700;
+            font-size: 3rem;
+            color: var(--text-bright);
+            line-height: 1;
+        }
+        .mass-unit {
+            font-family: 'Cormorant', serif;
+            font-weight: 400;
+            font-size: 1.4rem;
+            color: var(--text-secondary);
+        }
+        .mass-label-inline {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 8px;
+        }
+
+        /* --- Slider --- */
+        .mass-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: linear-gradient(to right,
+                var(--red) 0%,
+                var(--red) 42%,
+                var(--amber) 44%,
+                var(--amber) 46%,
+                var(--blue) 48%,
+                var(--blue) 100%
+            );
+            outline: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .mass-slider:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .mass-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--text-bright);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255,255,255,0.2);
+            transition: box-shadow 0.15s;
+        }
+        .mass-slider::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 14px rgba(255,255,255,0.4);
+        }
+        .mass-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border: none;
+            border-radius: 50%;
+            background: var(--text-bright);
+            cursor: pointer;
+        }
+        .slider-ticks {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        /* --- Prediction Badge --- */
+        .orbit-pred {
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pred-badge {
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        .pred-badge.bound { background: var(--blue-dim); color: var(--blue); }
+        .pred-badge.parabolic { background: var(--amber-dim); color: var(--amber); }
+        .pred-badge.escape { background: var(--red-dim); color: var(--red); }
+        .pred-text {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        /* --- Buttons --- */
+        .actions { display: flex; gap: 8px; }
+        .apply-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, var(--purple), #5840b0);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .apply-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 18px rgba(124, 92, 224, 0.35);
+        }
+        .apply-btn:active:not(:disabled) { transform: translateY(0); }
+        .apply-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .reset-btn {
+            padding: 12px 16px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        /* --- Speed --- */
+        .speed-controls {
+            display: flex;
+            gap: 4px;
+        }
+        .speed-btn {
+            padding: 5px 14px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .speed-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+        .speed-btn.active {
+            background: var(--purple-dim);
+            border-color: var(--purple);
+            color: var(--purple);
+        }
+
+        /* --- Physics Panel --- */
+        .physics-grid { display: flex; flex-direction: column; gap: 6px; }
+        .phys-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .phys-label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .phys-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-bright);
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+        .phys-value.highlight-amber {
+            color: var(--amber);
+            text-shadow: 0 0 8px rgba(245, 166, 35, 0.4);
+        }
+        .phys-value.highlight-red {
+            color: var(--red);
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+        }
+        .phys-value.highlight-blue {
+            color: var(--blue);
+        }
+
+        /* --- Energy Chart --- */
+        #energy-chart {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        /* --- Equation --- */
+        .equation-box {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            text-align: center;
+            line-height: 1.8;
+        }
+        .eq-highlight { color: var(--amber); font-weight: 500; }
+
+        /* --- Insight Card --- */
+        .insight-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            animation: slideIn 0.4s ease-out;
+        }
+        .insight-title {
+            font-family: 'Cormorant', serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-bright);
+            margin-bottom: 8px;
+        }
+        .insight-text {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            font-weight: 300;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Education Section --- */
+        .education {
+            padding: 60px 32px 40px;
+        }
+        .edu-heading {
+            font-family: 'Cormorant', serif;
+            font-weight: 600;
+            font-size: 1.6rem;
+            color: var(--text-bright);
+            margin-bottom: 32px;
+        }
+        .edu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .edu-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px 24px;
+        }
+        .edu-card h2 {
+            font-family: 'Cormorant', serif;
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: var(--text-bright);
+            margin-bottom: 14px;
+        }
+        .edu-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-weight: 300;
+        }
+        .edu-card .eq-inline {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            background: var(--bg-card);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        /* --- Footer --- */
+        .site-footer {
+            padding: 24px 32px 32px;
+            text-align: left;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 960px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                height: auto;
+                padding: 16px;
+                gap: 16px;
+            }
+            .sim-container { height: 55vh; }
+            .panel {
+                padding: 0 4px 24px;
+                gap: 16px;
+            }
+            .edu-grid {
+                grid-template-columns: 1fr;
+            }
+            .site-header { padding: 16px 16px 0; }
+            .education { padding: 40px 16px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <h1>What If the Sun Lost Half Its Mass?</h1>
+    <p class="subtitle">An interactive experiment in orbital mechanics</p>
+</header>
+
+<main class="workspace">
+    <div class="sim-container">
+        <canvas id="sim"></canvas>
+        <div class="canvas-status" id="canvas-status">t = 0.00 yr</div>
+    </div>
+
+    <aside class="panel">
+        <section class="panel-section">
+            <h3 class="panel-heading">Solar Mass</h3>
+            <div class="mass-display">
+                <span class="mass-value" id="mass-val">100</span><span class="mass-unit">%</span>
+                <span class="mass-label-inline">of original</span>
+            </div>
+            <input type="range" id="mass-slider" class="mass-slider" min="10" max="100" value="100" step="1">
+            <div class="slider-ticks">
+                <span>10%</span>
+                <span>50%</span>
+                <span>100%</span>
+            </div>
+            <div class="orbit-pred" id="orbit-pred">
+                <span class="pred-badge bound" id="pred-badge">CIRCULAR</span>
+                <span class="pred-text" id="pred-text">Stable circular orbit</span>
+            </div>
+        </section>
+
+        <section class="panel-section actions">
+            <button id="apply-btn" class="apply-btn" disabled>Apply Mass Change</button>
+            <button id="reset-btn" class="reset-btn">Reset</button>
+        </section>
+
+        <section class="panel-section">
+            <h3 class="panel-heading">Speed</h3>
+            <div class="speed-controls" id="speed-controls">
+                <button class="speed-btn active" data-speed="1">1x</button>
+                <button class="speed-btn" data-speed="5">5x</button>
+                <button class="speed-btn" data-speed="20">20x</button>
+            </div>
+        </section>
+
+        <section class="panel-section">
+            <h3 class="panel-heading">Orbital Parameters</h3>
+            <div class="physics-grid">
+                <div class="phys-row">
+                    <span class="phys-label">Velocity</span>
+                    <span class="phys-value" id="p-v">29.78 km/s</span>
+                </div>
+                <div class="phys-row">
+                    <span class="phys-label">Distance</span>
+                    <span class="phys-value" id="p-r">1.000 AU</span>
+                </div>
+                <div class="phys-row">
+                    <span class="phys-label">Semi-major axis</span>
+                    <span class="phys-value" id="p-a">1.000 AU</span>
+                </div>
+                <div class="phys-row">
+                    <span class="phys-label">Eccentricity</span>
+                    <span class="phys-value" id="p-e">0.000</span>
+                </div>
+                <div class="phys-row">
+                    <span class="phys-label">v / v<sub>esc</sub></span>
+                    <span class="phys-value" id="p-ratio">0.707</span>
+                </div>
+                <div class="phys-row">
+                    <span class="phys-label">Orbital energy</span>
+                    <span class="phys-value" id="p-E">&minus;0.500</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-section">
+            <h3 class="panel-heading">Energy vs. Mass</h3>
+            <canvas id="energy-chart" width="600" height="220"></canvas>
+        </section>
+
+        <section class="panel-section">
+            <h3 class="panel-heading">Vis-Viva Equation</h3>
+            <div class="equation-box" id="equation-box">
+                v&sup2; = GM(2/r &minus; 1/a)
+            </div>
+        </section>
+
+        <section class="panel-section" id="insight-section" style="display:none;">
+            <div class="insight-card">
+                <h3 class="insight-title" id="insight-title"></h3>
+                <p class="insight-text" id="insight-text"></p>
+            </div>
+        </section>
+    </aside>
+</main>
+
+<section class="education">
+    <h2 class="edu-heading">Understanding the physics</h2>
+    <div class="edu-grid">
+        <article class="edu-card">
+            <h2>The Misconception</h2>
+            <p>Ask a physics student what happens if the Sun instantly lost half its mass and most will say the orbit would double in size. It sounds right: half the gravity, twice the radius. But this assumes a new circular orbit forms instantly, ignoring that Earth retains its original velocity. Orbits are not static shapes assigned by gravity. They are trajectories determined by both position and velocity at every moment.</p>
+        </article>
+        <article class="edu-card">
+            <h2>The Critical Insight</h2>
+            <p>For a circular orbit, <span class="eq-inline">v = &radic;(GM/r)</span>. The escape velocity at the same distance is <span class="eq-inline">v<sub>esc</sub> = &radic;(2GM/r)</span>, exactly &radic;2 times larger. Now halve M: the new escape velocity becomes <span class="eq-inline">&radic;(2G &middot; M/2 / r) = &radic;(GM/r)</span>, which equals Earth's unchanged orbital velocity. At half the Sun's mass, Earth is moving at precisely escape speed.</p>
+        </article>
+        <article class="edu-card">
+            <h2>The General Rule</h2>
+            <p>For any sudden mass loss: if the remaining fraction &alpha; &gt; 50%, Earth enters an elliptical orbit with the current point as perihelion. At exactly 50%, Earth follows a parabolic trajectory, escaping to infinity with zero residual speed. Below 50%, the escape is hyperbolic, with excess velocity. The threshold is clean: exactly half. This is the vis-viva equation in action.</p>
+        </article>
+    </div>
+</section>
+
+<footer class="site-footer">
+    An interactive orbital mechanics demonstration. Simulation uses Velocity Verlet integration with Newtonian gravity.
+</footer>
+
+<script>
+(function() {
+    'use strict';
+
+    // ─── Configuration ───
+    const DT = 0.003;
+    const STEPS_PER_FRAME = 5;
+    const MAX_TRAIL = 15000;
+    const STAR_COUNT = 280;
+    const V_EARTH_KMS = 29.78; // Earth's orbital velocity in km/s
+
+    // ─── State ───
+    const state = {
+        massFraction: 1.0,
+        targetMass: 1.0,
+        applied: false,
+        earth: { x: 1, y: 0, vx: 0, vy: 1 },
+        trail: [],
+        periAngle: 0,
+        simSpeed: 1,
+        time: 0,
+        viewRadius: 2.0,
+        flashIntensity: 0,
+        canvasW: 0,
+        canvasH: 0,
+        stars: [],
+        chartW: 300,
+        chartH: 110,
+    };
+
+    // ─── DOM ───
+    const canvas = document.getElementById('sim');
+    const ctx = canvas.getContext('2d');
+    const els = {
+        massVal: document.getElementById('mass-val'),
+        slider: document.getElementById('mass-slider'),
+        applyBtn: document.getElementById('apply-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        predBadge: document.getElementById('pred-badge'),
+        predText: document.getElementById('pred-text'),
+        speedControls: document.getElementById('speed-controls'),
+        canvasStatus: document.getElementById('canvas-status'),
+        pV: document.getElementById('p-v'),
+        pR: document.getElementById('p-r'),
+        pA: document.getElementById('p-a'),
+        pE: document.getElementById('p-e'),
+        pRatio: document.getElementById('p-ratio'),
+        pEnergy: document.getElementById('p-E'),
+        energyChart: document.getElementById('energy-chart'),
+        equationBox: document.getElementById('equation-box'),
+        insightSection: document.getElementById('insight-section'),
+        insightTitle: document.getElementById('insight-title'),
+        insightText: document.getElementById('insight-text'),
+    };
+
+    // ─── Stars ───
+    function generateStars() {
+        state.stars = [];
+        for (let i = 0; i < STAR_COUNT; i++) {
+            state.stars.push({
+                x: Math.random(),
+                y: Math.random(),
+                r: Math.random() * 1.4 + 0.3,
+                brightness: Math.random() * 0.6 + 0.2,
+                twinkleSpeed: Math.random() * 0.02 + 0.005,
+                twinkleOffset: Math.random() * Math.PI * 2,
+            });
+        }
+    }
+
+    // ─── Canvas Setup ───
+    function resizeCanvas() {
+        const container = canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        state.canvasW = rect.width;
+        state.canvasH = rect.height;
+    }
+
+    // ─── Coordinate Transform ───
+    function simToCanvas(x, y) {
+        const cx = state.canvasW / 2;
+        const cy = state.canvasH / 2;
+        const scale = Math.min(state.canvasW, state.canvasH) / (2 * state.viewRadius);
+        return [cx + x * scale, cy - y * scale];
+    }
+
+    // ─── Physics Step (Velocity Verlet) ───
+    function step() {
+        const GM = state.massFraction;
+        const { x, y, vx, vy } = state.earth;
+        const r2 = x * x + y * y;
+        const r = Math.sqrt(r2);
+        const r3 = r2 * r;
+
+        // Current acceleration
+        const ax = -GM * x / r3;
+        const ay = -GM * y / r3;
+
+        // Position update
+        const nx = x + vx * DT + 0.5 * ax * DT * DT;
+        const ny = y + vy * DT + 0.5 * ay * DT * DT;
+
+        // New acceleration
+        const nr2 = nx * nx + ny * ny;
+        const nr = Math.sqrt(nr2);
+        const nr3 = nr2 * nr;
+        const nax = -GM * nx / nr3;
+        const nay = -GM * ny / nr3;
+
+        // Velocity update
+        state.earth.vx = vx + 0.5 * (ax + nax) * DT;
+        state.earth.vy = vy + 0.5 * (ay + nay) * DT;
+        state.earth.x = nx;
+        state.earth.y = ny;
+
+        // Record trail (every other step for memory)
+        if (state.trail.length === 0 || state.time % 2 === 0) {
+            state.trail.push({ x: nx, y: ny });
+            if (state.trail.length > MAX_TRAIL) state.trail.shift();
+        }
+
+        state.time++;
+    }
+
+    // ─── Orbital Elements ───
+    function computeOrbital() {
+        const { x, y, vx, vy } = state.earth;
+        const GM = state.massFraction;
+        const r = Math.sqrt(x * x + y * y);
+        const v2 = vx * vx + vy * vy;
+        const v = Math.sqrt(v2);
+        const L = Math.abs(x * vy - y * vx);
+        const epsilon = v2 / 2 - GM / r;
+        const v_esc = Math.sqrt(2 * GM / r);
+
+        let a, e, orbitType;
+        const EPS = 1e-6;
+
+        if (Math.abs(epsilon) < EPS) {
+            a = Infinity;
+            e = 1;
+            orbitType = 'parabolic';
+        } else if (epsilon < 0) {
+            a = -GM / (2 * epsilon);
+            const eArg = 1 + 2 * epsilon * L * L / (GM * GM);
+            e = eArg > 0 ? Math.sqrt(eArg) : 0;
+            orbitType = 'bound';
+        } else {
+            a = -GM / (2 * epsilon);
+            const eArg = 1 + 2 * epsilon * L * L / (GM * GM);
+            e = eArg > 0 ? Math.sqrt(eArg) : 1;
+            orbitType = 'escape';
+        }
+
+        return { r, v, a, e, epsilon, v_esc, L, orbitType, v2, GM };
+    }
+
+    // ─── Orbit Color ───
+    function orbitColor(alpha) {
+        if (alpha > 0.5 + 0.005) return '#3b82f6';
+        if (alpha < 0.5 - 0.005) return '#ef4444';
+        return '#f5a623';
+    }
+    function orbitColorRGB(alpha) {
+        if (alpha > 0.5 + 0.005) return '59,130,246';
+        if (alpha < 0.5 - 0.005) return '239,68,68';
+        return '245,166,35';
+    }
+
+    // ─── Rendering ───
+
+    function drawStars() {
+        const w = state.canvasW;
+        const h = state.canvasH;
+        const t = state.time * 0.01;
+        for (const s of state.stars) {
+            const twinkle = 0.7 + 0.3 * Math.sin(t * s.twinkleSpeed * 60 + s.twinkleOffset);
+            const alpha = s.brightness * twinkle;
+            ctx.fillStyle = `rgba(200,210,240,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawReferenceOrbit() {
+        const [cx, cy] = simToCanvas(0, 0);
+        const scale = Math.min(state.canvasW, state.canvasH) / (2 * state.viewRadius);
+        const r = 1 * scale;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.setLineDash([4, 6]);
+        ctx.strokeStyle = 'rgba(200,210,240,0.12)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function drawAnalyticalOrbit() {
+        if (!state.applied || state.massFraction >= 1.0 - 1e-6) return;
+
+        const alpha = state.massFraction;
+        const e = (1 - alpha) / alpha;
+        const p = 1 / alpha;
+        const angle0 = state.periAngle;
+
+        let maxTheta;
+        if (e < 1 - 1e-4) {
+            maxTheta = Math.PI;
+        } else if (e < 1 + 1e-4) {
+            maxTheta = Math.PI - 0.08;
+        } else {
+            maxTheta = Math.acos(Math.max(-1, -1 / e)) - 0.05;
+        }
+
+        const steps = 600;
+        const color = orbitColor(alpha);
+
+        ctx.beginPath();
+        let first = true;
+
+        for (let i = -steps; i <= steps; i++) {
+            const theta = (i / steps) * maxTheta;
+            const denom = 1 + e * Math.cos(theta);
+            if (denom <= 0.005) continue;
+            const r = p / denom;
+            if (r > state.viewRadius * 3.5) continue;
+
+            const wa = theta + angle0;
+            const x = r * Math.cos(wa);
+            const y = r * Math.sin(wa);
+            const [px, py] = simToCanvas(x, y);
+
+            if (first) { ctx.moveTo(px, py); first = false; }
+            else ctx.lineTo(px, py);
+        }
+
+        ctx.setLineDash([3, 5]);
+        ctx.strokeStyle = color + '50';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function drawTrail() {
+        const len = state.trail.length;
+        if (len < 2) return;
+
+        const color = state.applied ? orbitColorRGB(state.massFraction) : '59,130,246';
+        const segments = 5;
+        const segSize = Math.ceil(len / segments);
+
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (let s = 0; s < segments; s++) {
+            const start = s * segSize;
+            const end = Math.min(start + segSize, len - 1);
+            if (start >= len - 1) break;
+
+            const alpha = 0.08 + (s / Math.max(segments - 1, 1)) * 0.72;
+
+            ctx.beginPath();
+            const [px0, py0] = simToCanvas(state.trail[start].x, state.trail[start].y);
+            ctx.moveTo(px0, py0);
+
+            for (let i = start + 1; i <= end; i++) {
+                const [px, py] = simToCanvas(state.trail[i].x, state.trail[i].y);
+                ctx.lineTo(px, py);
+            }
+
+            ctx.strokeStyle = `rgba(${color},${alpha})`;
+            ctx.stroke();
+        }
+    }
+
+    function drawSun() {
+        const [cx, cy] = simToCanvas(0, 0);
+        const sizeScale = Math.min(state.canvasH, state.canvasW) / 550;
+        const baseR = 14 * sizeScale;
+        const r = baseR * Math.pow(state.massFraction, 0.33);
+
+        // Outer glow
+        const g1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 5);
+        g1.addColorStop(0, 'rgba(255,200,50,0.18)');
+        g1.addColorStop(0.4, 'rgba(255,150,0,0.06)');
+        g1.addColorStop(1, 'rgba(255,100,0,0)');
+        ctx.fillStyle = g1;
+        ctx.fillRect(cx - r * 5, cy - r * 5, r * 10, r * 10);
+
+        // Inner halo
+        const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.2);
+        g2.addColorStop(0, 'rgba(255,240,200,0.35)');
+        g2.addColorStop(1, 'rgba(255,180,0,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body
+        const g3 = ctx.createRadialGradient(cx, cy - r * 0.15, r * 0.1, cx, cy, r);
+        g3.addColorStop(0, '#fff8e0');
+        g3.addColorStop(0.25, '#ffe070');
+        g3.addColorStop(0.6, '#ffbe0b');
+        g3.addColorStop(1, '#e88a00');
+        ctx.fillStyle = g3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawEarth() {
+        const { x, y } = state.earth;
+        const [cx, cy] = simToCanvas(x, y);
+
+        // Skip if way off screen
+        if (cx < -80 || cx > state.canvasW + 80 || cy < -80 || cy > state.canvasH + 80) {
+            // Draw departure indicator
+            ctx.save();
+            ctx.font = '13px Outfit';
+            ctx.fillStyle = 'rgba(200,210,240,0.35)';
+            ctx.textAlign = 'center';
+            ctx.fillText('Earth has departed the visible area', state.canvasW / 2, 36);
+
+            // Arrow pointing toward Earth
+            const angle = Math.atan2(cy - state.canvasH / 2, cx - state.canvasW / 2);
+            const edgeX = state.canvasW / 2 + Math.cos(angle) * Math.min(state.canvasW, state.canvasH) * 0.38;
+            const edgeY = state.canvasH / 2 + Math.sin(angle) * Math.min(state.canvasW, state.canvasH) * 0.38;
+
+            ctx.beginPath();
+            ctx.arc(edgeX, edgeY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(74,158,255,0.6)';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(edgeX + Math.cos(angle) * 12, edgeY + Math.sin(angle) * 12);
+            ctx.lineTo(edgeX + Math.cos(angle + 2.6) * 8, edgeY + Math.sin(angle + 2.6) * 8);
+            ctx.lineTo(edgeX + Math.cos(angle - 2.6) * 8, edgeY + Math.sin(angle - 2.6) * 8);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(74,158,255,0.5)';
+            ctx.fill();
+
+            ctx.restore();
+            return;
+        }
+
+        const sizeScale = Math.min(state.canvasH, state.canvasW) / 550;
+
+        // Glow
+        const g1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, 12 * sizeScale);
+        g1.addColorStop(0, 'rgba(74,158,255,0.25)');
+        g1.addColorStop(1, 'rgba(74,158,255,0)');
+        ctx.fillStyle = g1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 12 * sizeScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body
+        const r = 4.5 * sizeScale;
+        const g2 = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.3, 0, cx, cy, r);
+        g2.addColorStop(0, '#8cc8ff');
+        g2.addColorStop(0.5, '#3b82f6');
+        g2.addColorStop(1, '#1d4ed8');
+        ctx.fillStyle = g2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawFlash() {
+        if (state.flashIntensity <= 0.01) return;
+        ctx.fillStyle = `rgba(255,240,180,${state.flashIntensity * 0.12})`;
+        ctx.fillRect(0, 0, state.canvasW, state.canvasH);
+        state.flashIntensity *= 0.91;
+    }
+
+    function render() {
+        const w = state.canvasW;
+        const h = state.canvasH;
+        if (w === 0 || h === 0) return;
+
+        // Clear
+        ctx.fillStyle = '#050710';
+        ctx.fillRect(0, 0, w, h);
+
+        drawStars();
+        drawReferenceOrbit();
+        drawAnalyticalOrbit();
+        drawTrail();
+        drawSun();
+        drawEarth();
+        drawFlash();
+
+        // Time display
+        const years = (state.time * DT) / (2 * Math.PI);
+        els.canvasStatus.textContent = `t = ${years.toFixed(2)} yr`;
+    }
+
+    // ─── Energy Chart ───
+    function drawEnergyChart() {
+        const c = els.energyChart;
+        const ectx = c.getContext('2d');
+        const cw = c.width;
+        const ch = c.height;
+
+        ectx.clearRect(0, 0, cw, ch);
+
+        // Account for 2x resolution
+        ectx.save();
+        ectx.scale(2, 2);
+
+        const w = 300, h = 110;
+        const pL = 36, pR = 12, pT = 16, pB = 24;
+        const pw = w - pL - pR;
+        const ph = h - pT - pB;
+
+        // Background
+        ectx.fillStyle = '#080a16';
+        ectx.fillRect(0, 0, w, h);
+
+        function aToX(a) { return pL + a * pw; }
+        function eToY(e) { return pT + (0.5 - e) * ph; }
+
+        // Escape zone
+        ectx.fillStyle = 'rgba(239,68,68,0.08)';
+        ectx.fillRect(pL, pT, pw, eToY(0) - pT);
+
+        // Bound zone
+        ectx.fillStyle = 'rgba(59,130,246,0.08)';
+        ectx.fillRect(pL, eToY(0), pw, pT + ph - eToY(0));
+
+        // Zero line
+        ectx.strokeStyle = 'rgba(200,210,240,0.2)';
+        ectx.lineWidth = 1;
+        ectx.setLineDash([3, 3]);
+        ectx.beginPath();
+        ectx.moveTo(pL, eToY(0));
+        ectx.lineTo(pL + pw, eToY(0));
+        ectx.stroke();
+        ectx.setLineDash([]);
+
+        // Energy line: E = 0.5 - alpha
+        ectx.strokeStyle = '#c8ccdd';
+        ectx.lineWidth = 1.5;
+        ectx.beginPath();
+        ectx.moveTo(aToX(0), eToY(0.5));
+        ectx.lineTo(aToX(1), eToY(-0.5));
+        ectx.stroke();
+
+        // Current position
+        const alpha = state.applied ? state.massFraction : state.targetMass;
+        const E = 0.5 - alpha;
+        const mx = aToX(alpha);
+        const my = eToY(E);
+
+        // Vertical indicator
+        ectx.strokeStyle = 'rgba(200,210,240,0.12)';
+        ectx.lineWidth = 1;
+        ectx.setLineDash([2, 2]);
+        ectx.beginPath();
+        ectx.moveTo(mx, pT);
+        ectx.lineTo(mx, pT + ph);
+        ectx.stroke();
+        ectx.setLineDash([]);
+
+        // Dot
+        const dotColor = E > 0.003 ? '#ef4444' : (E < -0.003 ? '#3b82f6' : '#f5a623');
+        ectx.fillStyle = dotColor + '40';
+        ectx.beginPath();
+        ectx.arc(mx, my, 8, 0, Math.PI * 2);
+        ectx.fill();
+        ectx.fillStyle = dotColor;
+        ectx.beginPath();
+        ectx.arc(mx, my, 4, 0, Math.PI * 2);
+        ectx.fill();
+
+        // Axis labels
+        ectx.fillStyle = '#4d5478';
+        ectx.font = '9px "IBM Plex Mono"';
+        ectx.textAlign = 'center';
+        ectx.fillText('10%', aToX(0.1), pT + ph + 16);
+        ectx.fillText('50%', aToX(0.5), pT + ph + 16);
+        ectx.fillText('100%', aToX(1.0), pT + ph + 16);
+
+        ectx.textAlign = 'right';
+        ectx.fillText('+E', pL - 6, pT + 8);
+        ectx.fillText('0', pL - 6, eToY(0) + 3);
+        ectx.fillText('\u2212E', pL - 6, pT + ph - 2);
+
+        // Zone labels
+        ectx.font = '8px Outfit';
+        ectx.textAlign = 'center';
+        ectx.fillStyle = 'rgba(239,68,68,0.5)';
+        ectx.fillText('ESCAPE', pL + pw * 0.18, pT + 10);
+        ectx.fillStyle = 'rgba(59,130,246,0.5)';
+        ectx.fillText('BOUND', pL + pw * 0.78, pT + ph - 5);
+
+        ectx.restore();
+    }
+
+    // ─── UI Updates ───
+    function updatePhysicsPanel() {
+        const o = computeOrbital();
+
+        els.pV.textContent = (o.v * V_EARTH_KMS).toFixed(2) + ' km/s';
+        els.pR.textContent = o.r.toFixed(3) + ' AU';
+
+        if (o.orbitType === 'bound') {
+            els.pA.textContent = o.a.toFixed(3) + ' AU';
+        } else if (o.orbitType === 'parabolic') {
+            els.pA.textContent = '\u221e';
+        } else {
+            els.pA.textContent = 'N/A (escape)';
+        }
+
+        els.pE.textContent = o.e.toFixed(3);
+
+        const ratio = o.v / o.v_esc;
+        els.pRatio.textContent = ratio.toFixed(3);
+
+        // Highlight v/v_esc
+        els.pRatio.className = 'phys-value';
+        if (Math.abs(ratio - 1) < 0.02) {
+            els.pRatio.classList.add('highlight-amber');
+        } else if (ratio > 1) {
+            els.pRatio.classList.add('highlight-red');
+        }
+
+        // Energy display
+        const eStr = o.epsilon >= 0
+            ? '+' + o.epsilon.toFixed(3)
+            : '\u2212' + Math.abs(o.epsilon).toFixed(3);
+        els.pEnergy.textContent = eStr;
+        els.pEnergy.className = 'phys-value';
+        if (Math.abs(o.epsilon) < 0.005) {
+            els.pEnergy.classList.add('highlight-amber');
+        } else if (o.epsilon > 0) {
+            els.pEnergy.classList.add('highlight-red');
+        } else {
+            els.pEnergy.classList.add('highlight-blue');
+        }
+    }
+
+    function updatePrediction(massPercent) {
+        const alpha = massPercent / 100;
+        const badge = els.predBadge;
+        const text = els.predText;
+
+        badge.className = 'pred-badge';
+
+        if (massPercent === 100) {
+            badge.classList.add('bound');
+            badge.textContent = 'CIRCULAR';
+            text.textContent = 'Stable circular orbit';
+        } else if (alpha > 0.5 + 0.005) {
+            badge.classList.add('bound');
+            badge.textContent = 'ELLIPTICAL';
+            const a = alpha / (2 * alpha - 1);
+            const e = (1 - alpha) / alpha;
+            text.textContent = `e = ${e.toFixed(2)}, a = ${a.toFixed(2)} AU`;
+        } else if (alpha < 0.5 - 0.005) {
+            badge.classList.add('escape');
+            badge.textContent = 'HYPERBOLIC';
+            text.textContent = 'Earth escapes the solar system';
+        } else {
+            badge.classList.add('parabolic');
+            badge.textContent = 'PARABOLIC';
+            text.textContent = 'v = v_escape exactly';
+        }
+    }
+
+    function showInsight() {
+        const alpha = state.massFraction;
+        const sec = els.insightSection;
+        sec.style.display = '';
+
+        if (alpha > 0.5 + 0.005) {
+            els.insightTitle.textContent = 'Not what you expected?';
+            const apo = (1 / (2 * alpha - 1)).toFixed(1);
+            els.insightText.textContent =
+                `Many students predict a circular orbit with radius ${(1/alpha).toFixed(1)} AU. `
+                + `Instead, Earth enters an elliptical orbit. The current point becomes perihelion `
+                + `(closest approach), and Earth swings out to ${apo} AU at aphelion before returning. `
+                + `The relationship between gravity and orbital shape is subtler than "half the force, double the distance."`;
+        } else if (alpha < 0.5 - 0.005) {
+            els.insightTitle.textContent = 'Complete escape';
+            els.insightText.textContent =
+                'With less than half the original solar mass remaining, Earth does not merely orbit farther out. '
+                + 'It leaves on a hyperbolic trajectory with excess velocity, never to return. '
+                + 'The energy budget is decisive: kinetic energy exceeds gravitational binding energy.';
+        } else {
+            els.insightTitle.textContent = 'The exact threshold';
+            els.insightText.textContent =
+                'At exactly half the Sun\'s mass, something remarkable happens: '
+                + 'Earth\'s orbital velocity precisely equals the new escape velocity. '
+                + 'It departs on a parabolic path, reaching infinity with zero residual speed. '
+                + 'This is not coincidence. For a circular orbit, v_orbit = \u221a(GM/r) and '
+                + 'v_escape = \u221a(2GM/r). Halve M, and v_escape_new = \u221a(GM/r) = v_orbit.';
+        }
+    }
+
+    // ─── Zoom ───
+    function updateZoom() {
+        let target = 2.0;
+
+        if (state.applied) {
+            const alpha = state.massFraction;
+            if (alpha > 0.5 + 0.005) {
+                const aphelion = 1 / (2 * alpha - 1);
+                target = Math.min(18, Math.max(2.0, aphelion * 1.15 + 0.4));
+            } else {
+                // Escape: moderate zoom out, then let Earth leave
+                target = 3.5;
+            }
+        }
+
+        state.viewRadius += (target - state.viewRadius) * 0.04;
+    }
+
+    // ─── Actions ───
+    function applyMassChange() {
+        const val = parseInt(els.slider.value);
+        state.massFraction = val / 100;
+        state.targetMass = state.massFraction;
+        state.applied = true;
+        state.trail = [];
+        state.flashIntensity = 1.0;
+        state.periAngle = Math.atan2(state.earth.y, state.earth.x);
+
+        els.slider.disabled = true;
+        els.applyBtn.disabled = true;
+        els.applyBtn.textContent = 'Applied';
+
+        updatePrediction(val);
+        showInsight();
+        drawEnergyChart();
+    }
+
+    function resetSimulation() {
+        state.massFraction = 1.0;
+        state.targetMass = 1.0;
+        state.applied = false;
+        state.earth = { x: 1, y: 0, vx: 0, vy: 1 };
+        state.trail = [];
+        state.time = 0;
+        state.viewRadius = 2.0;
+        state.flashIntensity = 0;
+
+        els.slider.value = 100;
+        els.slider.disabled = false;
+        els.massVal.textContent = '100';
+        els.applyBtn.disabled = true;
+        els.applyBtn.textContent = 'Apply Mass Change';
+        els.insightSection.style.display = 'none';
+
+        updatePrediction(100);
+        drawEnergyChart();
+    }
+
+    // ─── Event Listeners ───
+    els.slider.addEventListener('input', function() {
+        const val = parseInt(this.value);
+        els.massVal.textContent = val;
+        state.targetMass = val / 100;
+        els.applyBtn.disabled = (val === 100) || state.applied;
+        updatePrediction(val);
+        drawEnergyChart();
+    });
+
+    els.applyBtn.addEventListener('click', applyMassChange);
+    els.resetBtn.addEventListener('click', resetSimulation);
+
+    els.speedControls.addEventListener('click', function(e) {
+        const btn = e.target.closest('.speed-btn');
+        if (!btn) return;
+        state.simSpeed = parseInt(btn.dataset.speed);
+        this.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
+
+    window.addEventListener('resize', function() {
+        resizeCanvas();
+        drawEnergyChart();
+    });
+
+    // ─── Animation Loop ───
+    let frameCount = 0;
+    function animate() {
+        const steps = STEPS_PER_FRAME * state.simSpeed;
+        for (let i = 0; i < steps; i++) {
+            step();
+        }
+
+        updateZoom();
+        render();
+
+        // Update physics panel every 3 frames for performance
+        frameCount++;
+        if (frameCount % 3 === 0) {
+            updatePhysicsPanel();
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    // ─── Init ───
+    function init() {
+        generateStars();
+        resizeCanvas();
+        updatePrediction(100);
+        updatePhysicsPanel();
+        drawEnergyChart();
+        animate();
+    }
+
+    init();
+})();
+</script>
+
+</body>
+</html>
