@@ -664,7 +664,9 @@
             const targetOmega = this.alpha * this.alpha;
             this.currentRadius += (targetR - this.currentRadius) * 0.04;
             this.currentOmega += (targetOmega - this.currentOmega) * 0.04;
-            this.theta += this.currentOmega * 0.028;
+            // Clamp omega so orbits always complete in 3-8 seconds
+            const omega = Math.max(0.3, this.currentOmega);
+            this.theta += omega * 0.04;
 
             const targetView = Math.max(2.5, targetR * 1.35 + 0.5);
             this.viewRadius += (targetView - this.viewRadius) * 0.03;
@@ -893,9 +895,9 @@
                     target = Math.max(3.0, dist * 1.3 + 1.0);
                 }
             }
-            // Aggressive lerp so camera keeps up with escaping Earth
+            // Fast lerp so camera keeps up with escaping Earth
             const gap = Math.abs(target - this.viewRadius);
-            const speed = gap > 10 ? 0.12 : (gap > 3 ? 0.08 : 0.05);
+            const speed = gap > 20 ? 0.18 : (gap > 8 ? 0.14 : (gap > 3 ? 0.10 : 0.06));
             this.viewRadius += (target - this.viewRadius) * speed;
         },
 
@@ -1239,16 +1241,24 @@
     function animate() {
         if (mis.visible) { mis.update(); mis.render(); }
         if (real.visible) {
-            // Auto-accelerate on escape trajectories so Earth visibly flies away
+            // Auto-speed: calibrate so orbits/escapes resolve in ~5-8 seconds
+            // Base rate: 7 steps/frame * 0.004 dt = 0.028 tu/frame, at 60fps = 1.68 tu/sec
             let autoMult = 1;
-            if (real.applied && real.massFraction <= 0.505) {
-                const dist = Math.sqrt(real.earth.x ** 2 + real.earth.y ** 2);
-                // Immediate 3x boost + aggressive ramp with distance
-                // dist=1 → 3x, dist=2 → 6x, dist=5 → 15x, dist=10 → 30x, dist=20 → 60x
-                autoMult = 3 + Math.pow(Math.max(0, dist - 1), 1.1) * 3;
-                autoMult = Math.min(80, autoMult);
+            if (real.applied) {
+                const orb = real.computeOrbital();
+                if (orb.type === 'bound' && orb.a > 0) {
+                    // Period T = 2π * a^1.5 / sqrt(GM)
+                    const T = 2 * Math.PI * Math.pow(orb.a, 1.5) / Math.sqrt(real.massFraction);
+                    // Target: one full orbit in ~7 seconds → need T / (7 * 1.68) multiplier
+                    autoMult = Math.max(1, T / 11.76);
+                } else {
+                    // Escape (parabolic or hyperbolic): immediate 8x + distance ramp
+                    const dist = Math.sqrt(real.earth.x ** 2 + real.earth.y ** 2);
+                    autoMult = 8 * (1 + Math.max(0, dist - 1) * 0.5);
+                    autoMult = Math.min(120, autoMult);
+                }
             }
-            const steps = Math.min(500, Math.round(STEPS_PER_FRAME * real.simSpeed * autoMult));
+            const steps = Math.min(600, Math.round(STEPS_PER_FRAME * real.simSpeed * autoMult));
             for (let i = 0; i < steps; i++) real.step();
             real.updateZoom();
             real.render();
